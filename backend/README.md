@@ -35,7 +35,7 @@ pytest
 - **Risk scoring** (`services/risk_service.py`, `services/trust_engine.py`)
   is rule-based by design, not an ML confidence score. Never surface it to
   the UI as a percentage.
-- **WebSocket** (`/ws/{family_id}?role=mom|dad|son|scammer`) is server->client
+- **WebSocket** (`/ws/{family_id}?role=mom|dad|son|caller`) is server->client
   push only. All client actions go through the REST API in `api/`.
 - **Verification states** are three-way: `VERIFIED`, `FAILED`/`IMPERSONATION`,
   and `UNVERIFIED` (timeout or unreachable). `UNVERIFIED` is never treated as
@@ -66,7 +66,7 @@ Everything else (`/api/calls/start`, `/verify-person`, `/respond`,
 
 ### WebSocket contract
 
-Connect one socket per screen: `ws://<host>/ws/{family_id}?role=mom|dad|son|scammer`.
+Connect one socket per screen: `ws://<host>/ws/{family_id}?role=mom|dad|son|caller`.
 It's push-only from the server — send nothing, just listen for `{"event": ...}`
 messages. All 20 events from the product spec are implemented, plus one extra
 (`CONTACTING_SON`, fired the instant Verify Person reaches Rahul's device, so
@@ -85,7 +85,7 @@ the first real response).
 | `SON_TIMEOUT` | 30s with no response | `verification_status` becomes `UNVERIFIED`, not a scam verdict |
 | `SON_CONFIRMED` | `POST /calls/{id}/respond {confirmed:true}` | |
 | `SON_DENIED` | same, `confirmed:false` | followed by `IMPERSONATION_CONFIRMED` |
-| `SEND_CALLER_VERIFICATION` | `POST /calls/{id}/send-verification`, sent to `scammer` role | carries the link |
+| `SEND_CALLER_VERIFICATION` | `POST /calls/{id}/send-verification`, sent to `caller` role | carries the link |
 | `VERIFICATION_LINK_CREATED` | same, broadcast to family | |
 | `VERIFICATION_STARTED` | caller opens `GET /verification/{token}` | |
 | `VERIFICATION_SUCCESS` / `VERIFICATION_FAILED` | `POST /verification/{token}/login` | |

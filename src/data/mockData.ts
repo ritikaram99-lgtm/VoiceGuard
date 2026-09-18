@@ -117,7 +117,7 @@ export const RISK_SIGNALS: RiskSignal[] = [
   {
     id: 'sig-3',
     title: 'Voice mismatch',
-    description: 'Acoustic vocal tract resonances deviate from Rahul’s enrolled voice profile. Note: Voice analysis is an AI risk signal, not definitive proof.',
+    description: 'Acoustic vocal tract resonances deviate from Rahul’s enrolled voice profile. Note: this is a risk signal, not definitive proof.',
     severity: 'medium',
     tag: 'Voice Variance',
   },

@@ -5,6 +5,7 @@ import type {
   DemoStep,
   FamilyMember,
   Incident,
+  PendingCallerLink,
   RiskLevel,
   SecurityEvent,
   TranscriptMessage,
@@ -46,12 +47,14 @@ interface VoiceGuardContextType {
   incident: Incident;
   recentEvents: SecurityEvent[];
   demoStep: DemoStep;
+  pendingCallerLink: PendingCallerLink | null;
 
   // Action methods
   startDemoCall: () => void;
   triggerSuspicious: () => void;
   handleLiveAudioAnalysis: (result: BackendAnalyzeResponse) => void;
   requestVerification: () => void;
+  sendCallerVerification: (reason?: string) => Promise<void>;
   respondRahul: (isMe: boolean) => void;
   dismissActionProtection: () => void;
   setRiskLevel: (level: RiskLevel) => void;
@@ -110,6 +113,7 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const [recentEvents, setRecentEvents] = useState<SecurityEvent[]>(INITIAL_SECURITY_EVENTS);
   const [demoStep, setDemoStep] = useState<DemoStep>(1);
+  const [pendingCallerLink, setPendingCallerLink] = useState<PendingCallerLink | null>(null);
 
   // Cross-tab broadcast channel ref
   const channelRef = useRef<BroadcastChannel | null>(null);
@@ -174,7 +178,7 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const path = window.location.pathname;
     if (path.includes('/rahul')) role = 'son';
     else if (path.includes('/dad')) role = 'dad';
-    else if (path.includes('/caller')) role = 'scammer';
+    else if (path.includes('/caller')) role = 'caller';
 
     let ws: WebSocket | null = null;
     try {
@@ -296,6 +300,23 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               setRiskLevelState('UNVERIFIED');
               setVerificationRequest((prev) => ({ ...prev, status: 'none' }));
               break;
+
+            case 'SEND_CALLER_VERIFICATION':
+            case 'VERIFICATION_LINK_CREATED': {
+              const link: string | undefined = payload.link;
+              let token: string | undefined = payload.token;
+              if (!token && link) {
+                try {
+                  token = new URL(link).searchParams.get('token') ?? undefined;
+                } catch {
+                  // ignore malformed link
+                }
+              }
+              if (token && link) {
+                setPendingCallerLink({ token, link, expiresAt: payload.expires_at });
+              }
+              break;
+            }
 
             default:
               break;
@@ -460,18 +481,45 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       claimedIdentity: 'Rahul',
       caller: 'Mom',
       status: 'pending',
+      deviceStatus: 'contacting',
     };
     setVerificationRequest(newReq);
     setDemoStep(3);
-
-    // Call backend verify-person
-    api.verifyPerson(callId);
 
     syncCurrentState({
       isVerifyModalOpen: true,
       verificationRequest: newReq,
       demoStep: 3,
     });
+
+    // Call backend verify-person and reflect the REAL result — the
+    // registered device may genuinely be unreachable, which is a distinct
+    // state from "waiting for a response", not just a UI animation.
+    api.verifyPerson(callId).then((res) => {
+      if (res?.status === 'unavailable') {
+        setVerificationRequest((prev) => {
+          const updated = { ...prev, deviceStatus: 'unavailable' as const };
+          syncCurrentState({ verificationRequest: updated });
+          return updated;
+        });
+      }
+    });
+  };
+
+  // 3b. Mom (or Rahul, explicitly) sends the one-time caller verification
+  // link — either immediately, or after the device turned out unreachable.
+  const sendCallerVerification = async (reason: string = 'manual') => {
+    await api.sendVerificationLink(callId, reason);
+    setRecentEvents((prev) => [
+      {
+        id: `ev-${Date.now()}`,
+        title: 'Verification link sent to caller',
+        subtitle: 'One-time credential challenge dispatched to the anonymous number',
+        timestamp: 'Just now',
+        type: 'protected',
+      },
+      ...prev,
+    ]);
   };
 
   // 4. Rahul responds on trusted device
@@ -646,10 +694,12 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         incident,
         recentEvents,
         demoStep,
+        pendingCallerLink,
         startDemoCall,
         triggerSuspicious,
         handleLiveAudioAnalysis,
         requestVerification,
+        sendCallerVerification,
         respondRahul,
         dismissActionProtection,
         setRiskLevel,

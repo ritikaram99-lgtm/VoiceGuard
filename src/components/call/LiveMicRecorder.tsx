@@ -182,11 +182,11 @@ export const LiveMicRecorder: React.FC<LiveMicRecorderProps> = ({
             <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span>Live Microphone Analysis</span>
               <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-500 uppercase tracking-wider">
-                Real Whisper
+                Live
               </span>
             </div>
             <div className="text-[11px] text-slate-500">
-              Speak into your mic to test real-time AI transcription & risk analysis
+              Speak into your mic to test real-time transcription & risk analysis
             </div>
           </div>
         </div>
@@ -237,14 +237,14 @@ export const LiveMicRecorder: React.FC<LiveMicRecorderProps> = ({
             className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-md shadow-rose-600/20"
           >
             <Square className="w-4 h-4 fill-current" />
-            <span>Stop & Send to Whisper</span>
+            <span>Stop & Analyze</span>
           </button>
         )}
 
         {status === 'processing' && (
           <div className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-            <span>Whisper transcribing audio & evaluating risk...</span>
+            <span>Transcribing audio & evaluating risk...</span>
           </div>
         )}
 
@@ -290,7 +290,7 @@ export const LiveMicRecorder: React.FC<LiveMicRecorderProps> = ({
       {lastAnalysis && status === 'complete' && (
         <div className="mt-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 animate-in fade-in">
           <div className="flex items-center justify-between font-semibold">
-            <span className="text-slate-600">Whisper Transcript:</span>
+            <span className="text-slate-600">Transcript:</span>
             <span
               className={`px-2 py-0.5 rounded text-[11px] font-bold ${
                 lastAnalysis.risk_level === 'HIGH'

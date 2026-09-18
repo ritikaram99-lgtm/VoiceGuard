@@ -7,6 +7,8 @@ import { MomCallPage } from './pages/MomCallPage';
 import { RahulDevicePage } from './pages/RahulDevicePage';
 import { DadShieldPage } from './pages/DadShieldPage';
 import { CallerVerifyPage } from './pages/CallerVerifyPage';
+import { FamilyLoginPage } from './pages/FamilyLoginPage';
+import { FamilyManagementPage } from './pages/FamilyManagementPage';
 
 export function App() {
   return (
@@ -20,6 +22,8 @@ export function App() {
             <Route path="/rahul" element={<RahulDevicePage />} />
             <Route path="/dad" element={<DadShieldPage />} />
             <Route path="/caller" element={<CallerVerifyPage />} />
+            <Route path="/login" element={<FamilyLoginPage />} />
+            <Route path="/family" element={<FamilyManagementPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </AppShell>

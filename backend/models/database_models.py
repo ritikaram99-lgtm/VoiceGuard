@@ -89,3 +89,24 @@ class SetPresenceRequest(BaseModel):
     family_id: str
     role: str
     status: str  # online | offline
+
+
+class UpdateCredentialsRequest(BaseModel):
+    login_id: Optional[str] = None
+    password: Optional[str] = None
+    name: Optional[str] = None
+
+
+class FamilyLoginRequest(BaseModel):
+    # Accepts either a phone number or a login_id, whichever the client has.
+    identifier: str
+    password: str
+
+
+class FamilyLoginResponse(BaseModel):
+    status: str  # OK | FAILED
+    user_id: Optional[str] = None
+    family_id: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
+    message: str

@@ -49,6 +49,9 @@ export interface VerificationRequest {
   caller: string;
   status: 'none' | 'pending' | 'confirmed_yes' | 'confirmed_no';
   respondedAt?: string;
+  /** Real backend response to the last verify-person call: whether the
+   * registered device was actually reachable. */
+  deviceStatus?: 'contacting' | 'unavailable';
 }
 
 export interface ActionProtectionState {
@@ -81,3 +84,9 @@ export interface SecurityEvent {
 }
 
 export type DemoStep = 1 | 2 | 3 | 4 | 5;
+
+export interface PendingCallerLink {
+  token: string;
+  link: string;
+  expiresAt?: string;
+}

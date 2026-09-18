@@ -113,17 +113,26 @@ export const api = {
   },
 
   async verifyCallerCredentials(token: string, loginId: string, password: string) {
-
     try {
       const res = await fetch(`${BACKEND_URL}/api/verification/${token}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login_id: loginId, password }),
       });
-      if (!res.ok) return null;
-      return await res.json();
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, data };
     } catch {
-      return null;
+      return { ok: false, status: 0, data: null };
+    }
+  },
+
+  async getVerificationChallenge(token: string) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/verification/${token}`);
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, data };
+    } catch {
+      return { ok: false, status: 0, data: null };
     }
   },
 
@@ -144,6 +153,34 @@ export const api = {
       return await res.json();
     } catch {
       return null;
+    }
+  },
+
+  async updateMemberCredentials(userId: string, fields: { login_id?: string; password?: string; name?: string }) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/members/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, data };
+    } catch {
+      return { ok: false, data: null };
+    }
+  },
+
+  async familyLogin(identifier: string, password: string) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
+      });
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, data };
+    } catch {
+      return { ok: false, data: null };
     }
   },
 };

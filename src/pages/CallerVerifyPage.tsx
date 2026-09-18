@@ -1,39 +1,74 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   CheckCircle2,
   KeyRound,
+  Loader2,
   Lock,
-  RotateCcw,
   ShieldCheck,
   User,
   XCircle,
 } from 'lucide-react';
 import { DEMO_CREDENTIALS } from '../data/mockData';
 import { useVoiceGuard } from '../context/VoiceGuardContext';
+import { api } from '../services/api';
 
+type PageState = 'loading' | 'no_token' | 'invalid' | 'ready' | 'verifying' | 'success' | 'failed';
+
+interface ChallengeInfo {
+  call_id: string;
+  claimed_identity: string;
+  caller_number: string;
+  expires_at: string;
+}
 
 export const CallerVerifyPage: React.FC = () => {
-  const { callId, setRiskLevel } = useVoiceGuard();
+  const { setRiskLevel, pendingCallerLink } = useVoiceGuard();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || pendingCallerLink?.token || '';
+
+  const [state, setState] = useState<PageState>('loading');
+  const [challenge, setChallenge] = useState<ChallengeInfo | null>(null);
+  const [invalidMessage, setInvalidMessage] = useState('');
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');
-  const [verifyState, setVerifyState] = useState<'default' | 'verifying' | 'success' | 'failed'>('default');
 
-  const handleVerify = (e: React.FormEvent) => {
-    e.preventDefault();
-    setVerifyState('verifying');
-
-    setTimeout(() => {
-      if (
-        loginId.trim() === DEMO_CREDENTIALS.loginId &&
-        password.trim() === DEMO_CREDENTIALS.password
-      ) {
-        setVerifyState('success');
-        setRiskLevel('IDENTITY VERIFIED');
+  useEffect(() => {
+    if (!token) {
+      setState('no_token');
+      return;
+    }
+    setState('loading');
+    api.getVerificationChallenge(token).then((res) => {
+      if (res.ok && res.data) {
+        setChallenge(res.data);
+        setState('ready');
       } else {
-        setVerifyState('failed');
-        setRiskLevel('IDENTITY VERIFICATION FAILED');
+        setInvalidMessage(
+          res.data?.detail ||
+            (res.status === 410
+              ? 'This verification link has already been used or has expired.'
+              : 'This verification link is invalid.')
+        );
+        setState('invalid');
       }
-    }, 1200);
+    });
+  }, [token]);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setState('verifying');
+
+    const res = await api.verifyCallerCredentials(token, loginId.trim(), password.trim());
+
+    if (res.data?.status === 'VERIFIED') {
+      setState('success');
+      setRiskLevel('IDENTITY VERIFIED');
+    } else {
+      setState('failed');
+      setRiskLevel('IDENTITY VERIFICATION FAILED');
+    }
   };
 
   const autofillCorrect = () => {
@@ -42,15 +77,45 @@ export const CallerVerifyPage: React.FC = () => {
   };
 
   const autofillWrong = () => {
-    setLoginId('scammer_99');
-    setPassword('fake-pass-1234');
+    setLoginId('unknown_caller');
+    setPassword('guessed-pass-1234');
   };
 
-  const handleReset = () => {
-    setLoginId('');
-    setPassword('');
-    setVerifyState('default');
-  };
+  if (state === 'loading') {
+    return (
+      <div className="flex-1 max-w-md mx-auto w-full px-4 py-16 flex flex-col items-center justify-center gap-3 text-slate-500">
+        <Loader2 className="w-6 h-6 animate-spin" />
+        <p className="text-sm font-semibold">Loading verification request...</p>
+      </div>
+    );
+  }
+
+  if (state === 'no_token') {
+    return (
+      <div className="flex-1 max-w-md mx-auto w-full px-4 py-16 flex flex-col items-center justify-center gap-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+          <KeyRound className="w-8 h-8" />
+        </div>
+        <h1 className="text-lg font-black text-slate-800">No verification request open</h1>
+        <p className="text-sm text-slate-500">
+          This page only works when opened from a verification link sent during an active call.
+          Trigger "Send Verification" from Mom's call screen first.
+        </p>
+      </div>
+    );
+  }
+
+  if (state === 'invalid') {
+    return (
+      <div className="flex-1 max-w-md mx-auto w-full px-4 py-16 flex flex-col items-center justify-center gap-4 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h1 className="text-lg font-black text-slate-800">Link no longer valid</h1>
+        <p className="text-sm text-slate-500">{invalidMessage}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 max-w-md mx-auto w-full px-4 py-8 sm:py-12 flex flex-col justify-center">
@@ -62,7 +127,7 @@ export const CallerVerifyPage: React.FC = () => {
           </div>
         </div>
 
-        {verifyState === 'default' || verifyState === 'verifying' ? (
+        {state === 'ready' || state === 'verifying' ? (
           <>
             <div className="space-y-1.5">
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-100">
@@ -72,8 +137,9 @@ export const CallerVerifyPage: React.FC = () => {
                 IDENTITY VERIFICATION REQUIRED
               </h1>
               <p className="text-xs sm:text-sm text-slate-600">
-                You are claiming to be <span className="font-bold text-slate-900">Rahul</span> on call{' '}
-                <span className="font-mono font-bold text-slate-800">{callId}</span>.
+                You are claiming to be{' '}
+                <span className="font-bold text-slate-900">{challenge?.claimed_identity ?? 'the account holder'}</span> on call{' '}
+                <span className="font-mono font-bold text-slate-800">{challenge?.call_id}</span>.
               </p>
             </div>
 
@@ -115,10 +181,10 @@ export const CallerVerifyPage: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={verifyState === 'verifying'}
+                disabled={state === 'verifying'}
                 className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:bg-blue-400 text-white font-extrabold rounded-2xl text-sm shadow-md shadow-blue-500/20 transition flex items-center justify-center gap-2"
               >
-                {verifyState === 'verifying' ? (
+                {state === 'verifying' ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     <span>VERIFYING CREDENTIALS...</span>
@@ -143,23 +209,23 @@ export const CallerVerifyPage: React.FC = () => {
                   onClick={autofillCorrect}
                   className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold hover:bg-emerald-100 transition"
                 >
-                  Autofill Correct (Rahul)
+                  Autofill Correct
                 </button>
                 <button
                   type="button"
                   onClick={autofillWrong}
                   className="p-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 font-bold hover:bg-rose-100 transition"
                 >
-                  Autofill Fake (Scammer)
+                  Autofill Wrong
                 </button>
               </div>
             </div>
 
             <p className="text-[11px] text-slate-400">
-              “This verification link is one-time use and expires soon.”
+              "This verification link is one-time use and expires soon."
             </p>
           </>
-        ) : verifyState === 'success' ? (
+        ) : state === 'success' ? (
           /* SUCCESS STATE */
           <div className="space-y-5 py-4 animate-in zoom-in-95 duration-200">
             <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
@@ -174,19 +240,8 @@ export const CallerVerifyPage: React.FC = () => {
                 Identity confirmed. Voice line authorization granted.
               </p>
               <p className="text-xs text-slate-500">
-                The call status on Mom’s screen has been updated to verified.
+                The call status on Mom's screen has been updated to verified.
               </p>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Test Another Login</span>
-              </button>
             </div>
           </div>
         ) : (
@@ -209,14 +264,10 @@ export const CallerVerifyPage: React.FC = () => {
             </div>
 
             <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleReset}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Try Again</span>
-              </button>
+              <p className="text-[11px] text-slate-400">
+                This one-time link has now been used and can't be retried — a new verification link
+                would need to be sent for another attempt.
+              </p>
             </div>
           </div>
         )}

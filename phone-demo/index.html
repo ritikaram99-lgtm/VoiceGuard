@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VoiceGuard — Live Call Room</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="room-header">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h1>VoiceGuard — Live Call Room</h1>
+    </div>
+    <div class="room-controls">
+      <span id="callStatusPill" class="pill pill-idle">No active call</span>
+      <button id="newCallBtn" class="btn btn-primary">Start New Call</button>
+      <button id="endCallBtn" class="btn btn-ghost" disabled>End Call</button>
+    </div>
+  </header>
+
+  <main class="stage">
+
+    <!-- MOM PHONE -->
+    <section class="phone-col">
+      <div class="phone-label">Mom</div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="call-header">
+            <div class="caller-name">Rahul</div>
+            <div class="caller-sub">Incoming Call</div>
+            <div id="momRiskBadge" class="risk-badge risk-low">LOW RISK</div>
+          </div>
+          <div id="momTranscript" class="transcript"></div>
+          <div id="momNotify" class="notify-stack"></div>
+          <div class="phone-actions">
+            <button id="verifyBtn" class="btn btn-block btn-primary" disabled>Verify Person</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SON PHONE -->
+    <section class="phone-col">
+      <div class="phone-label">Rahul (Son)</div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div id="sonIdle" class="idle-state">
+            <div class="idle-icon">📱</div>
+            <p>Trusted device — waiting</p>
+          </div>
+          <div id="sonPrompt" class="verify-prompt hidden">
+            <div class="verify-icon">🛡️</div>
+            <h3>IS THIS YOU?</h3>
+            <p>Someone on a call with Mom is claiming to be <strong>Rahul</strong>.</p>
+            <div class="verify-actions">
+              <button id="sonYesBtn" class="btn btn-block btn-success">Yes, that's me</button>
+              <button id="sonNoBtn" class="btn btn-block btn-danger">No, not me</button>
+            </div>
+          </div>
+          <div id="sonNotify" class="notify-stack"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANONYMOUS CALLER PHONE -->
+    <section class="phone-col">
+      <div class="phone-label">Anonymous Call</div>
+      <div class="phone">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="call-header">
+            <div class="caller-name">Unknown Number</div>
+            <div class="caller-sub">Speaking as caller</div>
+          </div>
+          <div id="callerTranscript" class="transcript"></div>
+          <div id="callerNotify" class="notify-stack"></div>
+          <div class="composer">
+            <input id="lineInput" type="text" placeholder="Type what the caller says..." disabled />
+            <button id="sendLineBtn" class="btn btn-primary" disabled>Send</button>
+          </div>
+          <div class="quick-phrases" id="quickPhrases"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="room-footer">
+    Connects live to the VoiceGuard backend at <code>127.0.0.1:8123</code> — each phone above is its
+    own independent WebSocket connection (role=mom / son / caller), same as three real devices would be.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

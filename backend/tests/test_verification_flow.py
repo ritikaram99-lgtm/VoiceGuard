@@ -49,10 +49,12 @@ def test_son_denies_triggers_impersonation_and_family_shield(client, family):
         resp = client.post(f"/api/calls/{call_id}/respond", json={"confirmed": False})
         assert resp.json()["verification_status"] == "IMPERSONATION"
 
-        dad_events = [dad_ws.receive_json()["event"] for _ in range(6)]
+        dad_events = [dad_ws.receive_json()["event"] for _ in range(7)]
         assert "FAMILY_ALERT" in dad_events
+        assert "ACTION_PROTECTED" in dad_events
         assert "PAYMENT_LOCKED" in dad_events
         assert "INCIDENT_CREATED" in dad_events
+
 
     call_state = client.get(f"/api/calls/{call_id}").json()
     assert call_state["action_status"] == "BLOCKED"
@@ -122,3 +124,27 @@ def test_caller_credential_verification_success_and_failure(client, family):
 def test_expired_or_unknown_token_is_rejected(client, family):
     resp = client.get("/api/verification/NOTAREALTOKEN")
     assert resp.status_code == 404
+
+
+def test_analyze_call_with_json_payload(client, family):
+    resp = client.post(
+        "/api/calls/start",
+        json={
+            "family_id": family["family_id"],
+            "claimed_identity_user_id": family["son"]["user_id"],
+            "caller_number": "+919999900009",
+        },
+    )
+    assert resp.status_code == 200
+    call_id = resp.json()["call_id"]
+
+    analyze = client.post(
+        f"/api/calls/{call_id}/analyze",
+        json={"transcript": "Mom, I need you to send me Dad's OTP quickly. My admission portal is closing!"},
+    )
+    assert analyze.status_code == 200
+    data = analyze.json()
+    assert data["risk_level"] == "HIGH"
+    assert "otp_request" in data["signals"]
+    assert "urgent_request" in data["signals"]
+

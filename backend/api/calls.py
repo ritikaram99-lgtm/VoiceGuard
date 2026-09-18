@@ -1,7 +1,9 @@
 import asyncio
 import json
+import os
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+
 
 from database.database import db_session
 from models.database_models import (
@@ -80,16 +82,30 @@ async def accept_call(call_id: str):
 
 
 @router.post("/{call_id}/analyze", response_model=AnalyzeResponse)
-async def analyze_call(call_id: str, transcript: str | None = Form(None), audio: UploadFile | None = File(None)):
+async def analyze_call(
+    call_id: str,
+    request: Request,
+    transcript: str | None = Form(None),
+    audio: UploadFile | None = File(None),
+):
     call = get_call_or_404(call_id)
     claimed_user = family_service.get_user(call["claimed_identity_user_id"])
+
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            if isinstance(body, dict) and "transcript" in body:
+                transcript = body["transcript"]
+        except Exception:
+            pass
 
     audio_bytes = await audio.read() if audio is not None else None
 
     if transcript:
         final_transcript = transcript
     elif audio_bytes:
-        final_transcript = whisper_service.transcribe(audio_bytes)
+        final_transcript = await whisper_service.async_transcribe(audio_bytes)
     else:
         final_transcript = call["transcript"] or ""
 
@@ -97,7 +113,8 @@ async def analyze_call(call_id: str, transcript: str | None = Form(None), audio:
     speaker_similarity: float | None = None
     if audio_bytes and claimed_user and claimed_user["voice_embedding"]:
         registered_embedding = json.loads(claimed_user["voice_embedding"])
-        speaker_match, speaker_similarity = speaker_service.compare(registered_embedding, audio_bytes)
+        speaker_match, speaker_similarity = await speaker_service.async_compare(registered_embedding, audio_bytes)
+
 
     signals = risk_service.analyze_transcript(final_transcript)
 
@@ -231,11 +248,12 @@ async def respond(call_id: str, body: RespondRequest):
         risk_signals=call["risk_signals"],
         speaker_result=None if call["speaker_match"] is None else str(call["speaker_match"]),
         verification_result="IMPERSONATION_CONFIRMED",
-        action_taken="PAYMENT_BLOCKED",
+        action_taken="ACTION_PROTECTED",
     )
 
     await manager.broadcast(family_id, {"event": "SON_DENIED", "call_id": call_id})
     await manager.broadcast(family_id, {"event": "IMPERSONATION_CONFIRMED", "call_id": call_id, "status": "SON_DENIED"})
+    await manager.broadcast(family_id, {"event": "ACTION_PROTECTED", "call_id": call_id, "status": "BLOCKED"})
     await manager.broadcast(family_id, {"event": "PAYMENT_LOCKED", "call_id": call_id})
     await manager.send_to_role(
         family_id,
@@ -263,7 +281,9 @@ async def send_verification(call_id: str, body: SendVerificationRequest):
         caller_number=call["caller_number"],
         reason=body.reason,
     )
-    link = f"https://voiceguard.app/verify/{token}"
+    frontend_origin = os.getenv("VOICEGUARD_FRONTEND_URL", "http://localhost:5174")
+    link = f"{frontend_origin}/caller?token={token}"
+
 
     with db_session() as conn:
         conn.execute("UPDATE calls SET verification_status = 'PENDING' WHERE id = ?", (call_id,))

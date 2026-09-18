@@ -56,6 +56,7 @@ async def login(token: str, body: LoginRequest):
         family_service.record_call_for_caller(challenge["caller_number"], suspicious=False, result="VERIFIED")
 
         await manager.broadcast(family_id, {"event": "VERIFICATION_SUCCESS", "call_id": call_id})
+        await manager.broadcast(family_id, {"event": "ACTION_ALLOWED", "call_id": call_id})
         await manager.broadcast(family_id, {"event": "PAYMENT_UNLOCKED", "call_id": call_id})
         return LoginResponse(status="VERIFIED", message=f"The caller successfully authenticated the registered {claimed_user['name']} identity.")
 
@@ -72,12 +73,14 @@ async def login(token: str, body: LoginRequest):
         risk_signals=json.loads(call["risk_signals"]) if call and call["risk_signals"] else [],
         speaker_result=None if not call or call["speaker_match"] is None else str(bool(call["speaker_match"])),
         verification_result="IDENTITY_VERIFICATION_FAILED",
-        action_taken="PAYMENT_BLOCKED",
+        action_taken="ACTION_PROTECTED",
     )
 
     await manager.broadcast(family_id, {"event": "VERIFICATION_FAILED", "call_id": call_id})
     await manager.broadcast(family_id, {"event": "IMPERSONATION_CONFIRMED", "call_id": call_id, "status": "IDENTITY_VERIFICATION_FAILED"})
+    await manager.broadcast(family_id, {"event": "ACTION_PROTECTED", "call_id": call_id, "status": "BLOCKED"})
     await manager.broadcast(family_id, {"event": "PAYMENT_LOCKED", "call_id": call_id})
+
     await manager.send_to_role(
         family_id,
         "dad",

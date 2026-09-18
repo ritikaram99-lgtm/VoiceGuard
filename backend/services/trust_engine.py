@@ -45,11 +45,12 @@ def compute_risk(
         level = "HIGH"
         recommendation = "VERIFY_PERSON"
     elif score > LOW_MAX:
-        level = "MEDIUM"
+        level = "SUSPICIOUS"
         recommendation = "MONITOR"
     else:
         level = "LOW"
         recommendation = "PROCEED"
+
 
     return score, level, recommendation, applied
 

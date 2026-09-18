@@ -3,13 +3,21 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+import asyncio
+import logging
+import os
+
 from api import calls, demo, family, identity, incidents, payment, verification
 from database.database import db_session, init_db
+from services import speaker_service, whisper_service
 from websocket.manager import manager
+
+logger = logging.getLogger("voiceguard")
 
 DEMO_FAMILY_ID = "demo-family"
 DEMO_LOGIN_ID = "rahul_001"
 DEMO_PASSWORD = "voiceguard-demo-2026"  # prototype-only credential, not a real secret
+
 
 
 def seed_demo_family() -> None:
@@ -39,6 +47,24 @@ def seed_demo_family() -> None:
 async def lifespan(app: FastAPI):
     init_db()
     seed_demo_family()
+
+    # Pre-cache ML models at startup if enabled
+    if os.getenv("VOICEGUARD_USE_REAL_WHISPER", "1") not in ("0", "false", "False"):
+        try:
+            logger.info("Pre-warming Whisper model at startup...")
+            await asyncio.to_thread(whisper_service.load_model)
+            logger.info("Whisper model ready.")
+        except Exception as e:
+            logger.warning(f"Could not pre-warm Whisper model: {e}")
+
+    if os.getenv("VOICEGUARD_USE_REAL_ECAPA", "1") not in ("0", "false", "False"):
+        try:
+            logger.info("Pre-warming SpeechBrain ECAPA model at startup...")
+            await asyncio.to_thread(speaker_service.load_model)
+            logger.info("SpeechBrain ECAPA model ready.")
+        except Exception as e:
+            logger.warning(f"Could not pre-warm SpeechBrain ECAPA model: {e}")
+
     yield
 
 

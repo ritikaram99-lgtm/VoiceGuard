@@ -1,16 +1,46 @@
-"""Speaker verification. Real ECAPA-TDNN (speechbrain) is a drop-in swap —
-see `_embed_real`. Mock mode derives a deterministic pseudo-embedding from
-the audio bytes so demo runs are repeatable: the same recording always
-produces the same similarity against a given registered embedding.
+"""Speaker verification using SpeechBrain ECAPA-TDNN.
+
+Real ECAPA-TDNN (speechbrain) is used when available.
+Mock mode derives a deterministic pseudo-embedding from the audio bytes
+if the real model is disabled or speechbrain is not installed.
 
 Raw voice recordings are never persisted — only the derived embedding.
+Temporary audio files are strictly cleaned up.
+Model is cached at startup.
+Non-blocking async helpers allow inference in a threadpool without blocking the event loop.
 """
 
+import asyncio
 import hashlib
+import logging
 import os
+import tempfile
+
+logger = logging.getLogger(__name__)
+
+# Ensure certificates are discoverable
+try:
+    import certifi
+    os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+except ImportError:
+    pass
 
 EMBEDDING_DIM = 32
-MATCH_THRESHOLD = 0.6
+MATCH_THRESHOLD = float(os.getenv("VOICEGUARD_SPEAKER_THRESHOLD", "0.65"))
+
+_CLASSIFIER = None
+
+
+
+def load_model():
+    """Pre-warm and cache the ECAPA-TDNN classifier model in memory."""
+    global _CLASSIFIER
+    if _CLASSIFIER is None:
+        from speechbrain.inference.speaker import EncoderClassifier  # type: ignore
+        logger.info("Loading SpeechBrain ECAPA-TDNN model...")
+        _CLASSIFIER = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
+        logger.info("SpeechBrain ECAPA-TDNN model loaded successfully.")
+    return _CLASSIFIER
 
 
 def _pseudo_embedding(audio_bytes: bytes) -> list[float]:
@@ -19,27 +49,42 @@ def _pseudo_embedding(audio_bytes: bytes) -> list[float]:
 
 
 def _embed_real(audio_bytes: bytes) -> list[float]:
-    import tempfile
+    global _CLASSIFIER
+    if _CLASSIFIER is None:
+        load_model()
 
-    import torch  # type: ignore
-    from speechbrain.inference.speaker import EncoderClassifier  # type: ignore
+    tmp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    path = tmp_file.name
+    try:
+        tmp_file.write(audio_bytes)
+        tmp_file.flush()
+        tmp_file.close()
 
-    classifier = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-        f.write(audio_bytes)
-        path = f.name
-    signal = classifier.load_audio(path)
-    embedding = classifier.encode_batch(signal.unsqueeze(0))
-    return embedding.squeeze().tolist()
+        signal = _CLASSIFIER.load_audio(path)
+        embedding = _CLASSIFIER.encode_batch(signal.unsqueeze(0), normalize=True)
+        return embedding.squeeze().tolist()
+
+    finally:
+        if os.path.exists(path):
+            try:
+                os.unlink(path)
+            except OSError as e:
+                logger.warning(f"Failed to remove temporary audio file {path}: {e}")
 
 
 def embed(audio_bytes: bytes) -> list[float]:
-    if os.getenv("VOICEGUARD_USE_REAL_ECAPA") == "1":
+    use_real = os.getenv("VOICEGUARD_USE_REAL_ECAPA", "1")
+    if use_real not in ("0", "false", "False"):
         try:
             return _embed_real(audio_bytes)
-        except ImportError:
-            pass
+        except Exception as e:
+            logger.warning(f"SpeechBrain embedding extraction failed, falling back to mock: {e}")
     return _pseudo_embedding(audio_bytes)
+
+
+async def async_embed(audio_bytes: bytes) -> list[float]:
+    """Run embedding extraction asynchronously in a background thread."""
+    return await asyncio.to_thread(embed, audio_bytes)
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -57,3 +102,8 @@ def compare(registered_embedding: list[float], caller_audio: bytes) -> tuple[boo
     caller_embedding = embed(caller_audio)
     similarity = round(_cosine_similarity(registered_embedding, caller_embedding), 4)
     return similarity >= MATCH_THRESHOLD, similarity
+
+
+async def async_compare(registered_embedding: list[float], caller_audio: bytes) -> tuple[bool, float]:
+    """Run comparison asynchronously in a background thread."""
+    return await asyncio.to_thread(compare, registered_embedding, caller_audio)

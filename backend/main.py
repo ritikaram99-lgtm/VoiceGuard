@@ -78,6 +78,6 @@ async def ws_endpoint(websocket: WebSocket, family_id: str, role: str):
             # Keep the connection alive; ignore any client pings/messages.
             await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(family_id, role)
-        if role == "son":
+        went_offline = manager.disconnect(websocket, family_id, role)
+        if role == "son" and went_offline:
             await manager.broadcast(family_id, {"event": "SON_OFFLINE"})

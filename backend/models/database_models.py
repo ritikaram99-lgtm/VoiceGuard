@@ -5,7 +5,10 @@ from pydantic import BaseModel
 
 class FamilyMemberIn(BaseModel):
     name: str
-    role: str  # mom | dad | son | daughter
+    role: str  # mom | dad | son — Verify Person and the caller-verification
+    # link are hardcoded around "son" (matching the SON_* WS event names in
+    # the product spec); other roles can connect but aren't a protectable
+    # claimed identity yet.
     login_id: Optional[str] = None
     password: Optional[str] = None
     phone: Optional[str] = None

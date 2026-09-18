@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     family_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT NOT NULL,              -- mom | dad | son | daughter
+    role TEXT NOT NULL,              -- mom | dad | son (see FamilyMemberIn)
     login_id TEXT UNIQUE,
     password TEXT,
     phone TEXT,

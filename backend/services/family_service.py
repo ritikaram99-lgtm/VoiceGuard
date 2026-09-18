@@ -39,11 +39,6 @@ def get_user(user_id: str) -> sqlite3.Row | None:
         return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
 
 
-def get_user_by_login(login_id: str) -> sqlite3.Row | None:
-    with db_session() as conn:
-        return conn.execute("SELECT * FROM users WHERE login_id = ?", (login_id,)).fetchone()
-
-
 def get_family_members(family_id: str) -> list[sqlite3.Row]:
     with db_session() as conn:
         return conn.execute("SELECT * FROM users WHERE family_id = ?", (family_id,)).fetchall()

@@ -18,8 +18,16 @@ class ConnectionManager:
         self._connections.setdefault(family_id, {})[role] = websocket
         self._presence_override.pop((family_id, role), None)
 
-    def disconnect(self, family_id: str, role: str) -> None:
-        self._connections.get(family_id, {}).pop(role, None)
+    def disconnect(self, websocket: WebSocket, family_id: str, role: str) -> bool:
+        # Only evict if this is still the current connection for the role —
+        # a stale connection (e.g. a reloaded tab) disconnecting later must
+        # not evict a newer one that already took its place. Returns whether
+        # this disconnect actually changed presence (caller uses this to
+        # decide whether an OFFLINE event is warranted).
+        if self._connections.get(family_id, {}).get(role) is websocket:
+            self._connections[family_id].pop(role, None)
+            return True
+        return False
 
     def is_online(self, family_id: str, role: str) -> bool:
         override = self._presence_override.get((family_id, role))
@@ -34,14 +42,23 @@ class ConnectionManager:
         ws = self._connections.get(family_id, {}).get(role)
         if ws is None:
             return False
-        await ws.send_json(message)
+        try:
+            await ws.send_json(message)
+        except Exception:
+            self.disconnect(ws, family_id, role)
+            return False
         return True
 
     async def broadcast(self, family_id: str, message: dict, exclude_role: str | None = None) -> None:
+        # One dead socket must not stop the event from reaching everyone else
+        # in the family (e.g. a Family Shield alert still has to reach Dad
+        # even if Mom's tab just dropped).
         for role, ws in list(self._connections.get(family_id, {}).items()):
             if role == exclude_role:
                 continue
-            await ws.send_json(message)
-
+            try:
+                await ws.send_json(message)
+            except Exception:
+                self.disconnect(ws, family_id, role)
 
 manager = ConnectionManager()

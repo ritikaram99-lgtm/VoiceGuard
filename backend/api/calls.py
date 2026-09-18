@@ -235,7 +235,7 @@ async def respond(call_id: str, body: RespondRequest):
     )
 
     await manager.broadcast(family_id, {"event": "SON_DENIED", "call_id": call_id})
-    await manager.broadcast(family_id, {"event": "IMPERSONATION_CONFIRMED", "call_id": call_id})
+    await manager.broadcast(family_id, {"event": "IMPERSONATION_CONFIRMED", "call_id": call_id, "status": "SON_DENIED"})
     await manager.broadcast(family_id, {"event": "PAYMENT_LOCKED", "call_id": call_id})
     await manager.send_to_role(
         family_id,

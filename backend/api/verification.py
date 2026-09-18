@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from database.database import db_session
@@ -67,8 +69,8 @@ async def login(token: str, body: LoginRequest):
         claimed_identity=claimed_user["name"],
         transcript=call["transcript"] if call else "",
         risk_level=call["risk_level"] if call else "UNKNOWN",
-        risk_signals=[],
-        speaker_result=None,
+        risk_signals=json.loads(call["risk_signals"]) if call and call["risk_signals"] else [],
+        speaker_result=None if not call or call["speaker_match"] is None else str(bool(call["speaker_match"])),
         verification_result="IDENTITY_VERIFICATION_FAILED",
         action_taken="PAYMENT_BLOCKED",
     )

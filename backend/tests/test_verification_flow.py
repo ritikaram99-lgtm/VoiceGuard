@@ -104,7 +104,11 @@ def test_caller_credential_verification_success_and_failure(client, family):
     assert call_state["action_status"] == "BLOCKED"
 
     incidents = client.get("/api/incidents", params={"family_id": family["family_id"]}).json()
-    assert any(i["call_id"] == call_id for i in incidents)
+    incident = next(i for i in incidents if i["call_id"] == call_id)
+    # The incident must carry the call's actual risk signals, not an empty
+    # placeholder — this is what the family/Dad's incident view relies on.
+    assert set(incident["risk_signals"]) >= {"urgent_request", "money_request", "secrecy"}
+    assert incident["risk_level"] == "HIGH"
 
     # A fresh token with correct credentials succeeds and unlocks payment.
     send2 = client.post(f"/api/calls/{call_id}/send-verification", json={"reason": "manual"}).json()

@@ -288,15 +288,14 @@ async def send_verification(call_id: str, body: SendVerificationRequest):
         caller_number=call["caller_number"],
         reason=body.reason,
     )
-    frontend_origin = os.getenv("VOICEGUARD_FRONTEND_URL", "http://localhost:5174")
+    frontend_origin = os.getenv("VOICEGUARD_FRONTEND_URL", "http://localhost:5173")
     link = f"{frontend_origin}/caller?token={token}"
-
 
     with db_session() as conn:
         conn.execute("UPDATE calls SET verification_status = 'PENDING' WHERE id = ?", (call_id,))
 
     await manager.broadcast(call["family_id"], {"event": "VERIFICATION_LINK_CREATED", "call_id": call_id, "link": link, "expires_at": expires_at})
-    await manager.send_to_role(call["family_id"], "scammer", {"event": "SEND_CALLER_VERIFICATION", "call_id": call_id, "link": link, "token": token})
+    await manager.send_to_role(call["family_id"], "caller", {"event": "SEND_CALLER_VERIFICATION", "call_id": call_id, "link": link, "token": token})
 
     return SendVerificationResponse(token=token, link=link, expires_at=expires_at)
 

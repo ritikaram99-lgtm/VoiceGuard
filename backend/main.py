@@ -93,7 +93,7 @@ async def health():
 
 @app.websocket("/ws/{family_id}")
 async def ws_endpoint(websocket: WebSocket, family_id: str, role: str):
-    """One connection per (family_id, role): mom | dad | son | scammer.
+    """One connection per (family_id, role): mom | dad | son | caller.
     Server -> client push only; all client actions go through the REST API.
     """
     await manager.connect(websocket, family_id, role)

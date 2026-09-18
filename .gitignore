@@ -29,3 +29,4 @@ backend/voiceguard.db
 *.njsproj
 *.sln
 *.sw?
+.claude/

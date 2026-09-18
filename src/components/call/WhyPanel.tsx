@@ -36,7 +36,7 @@ export const WhyPanel: React.FC<WhyPanelProps> = ({
                 Why is this call suspicious?
               </h3>
               <p className="text-xs text-slate-500">
-                VoiceGuard AI detected 3 risk signals in this live call
+                VoiceGuard detected 3 risk signals in this live call
               </p>
             </div>
           </div>
@@ -83,7 +83,7 @@ export const WhyPanel: React.FC<WhyPanelProps> = ({
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-xs space-y-1">
                 <p className="font-bold text-blue-900">
-                  Important: AI is a risk signal, not proof
+                  Important: this is a risk signal, not proof
                 </p>
                 <p className="text-blue-800/90 leading-relaxed">
                   Voice analysis flags acoustic variance, but voice alone does not prove identity.

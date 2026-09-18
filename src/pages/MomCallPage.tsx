@@ -208,7 +208,7 @@ export const MomCallPage: React.FC = () => {
                 type="button"
                 onClick={triggerSuspicious}
                 className="text-[11px] font-bold text-blue-700 hover:text-blue-900 bg-white/80 px-2 py-1 rounded-lg border border-emerald-200/60"
-                title="Simulate OTP fraud attack scenario"
+                title="Simulate suspicious call scenario"
               >
                 Test Urgency
               </button>

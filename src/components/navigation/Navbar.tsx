@@ -60,7 +60,7 @@ export const Navbar: React.FC = () => {
     },
     {
       path: '/caller',
-      label: 'Caller (Verify)',
+      label: 'Anonymous Call',
       icon: KeyRound,
       badge: null,
     },

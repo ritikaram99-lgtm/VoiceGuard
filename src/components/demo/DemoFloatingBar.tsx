@@ -139,7 +139,7 @@ export const DemoFloatingBar: React.FC = () => {
                 { label: 'Mom', path: '/mom' },
                 { label: 'Rahul', path: '/rahul' },
                 { label: 'Dad', path: '/dad' },
-                { label: 'Caller', path: '/caller' },
+                { label: 'Anonymous', path: '/caller' },
               ].map((r) => (
                 <button
                   key={r.path}

@@ -173,7 +173,7 @@ export const RahulDevicePage: React.FC = () => {
                 IMPERSONATION CONFIRMED
               </h2>
               <p className="text-sm text-slate-700 max-w-xs mx-auto font-medium">
-                The caller could not be trusted as Rahul. The trusted device owner explicitly confirmed this is fraud.
+                The caller could not be trusted as Rahul. The trusted device owner explicitly confirmed this is not them.
               </p>
             </div>
 

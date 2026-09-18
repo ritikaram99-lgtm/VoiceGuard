@@ -113,17 +113,26 @@ export const api = {
   },
 
   async verifyCallerCredentials(token: string, loginId: string, password: string) {
-
     try {
       const res = await fetch(`${BACKEND_URL}/api/verification/${token}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login_id: loginId, password }),
       });
-      if (!res.ok) return null;
-      return await res.json();
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, data };
     } catch {
-      return null;
+      return { ok: false, status: 0, data: null };
+    }
+  },
+
+  async getVerificationChallenge(token: string) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/verification/${token}`);
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, status: res.status, data };
+    } catch {
+      return { ok: false, status: 0, data: null };
     }
   },
 

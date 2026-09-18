@@ -79,11 +79,11 @@ export const IncidentCapsule: React.FC<IncidentCapsuleProps> = ({
             </div>
           </div>
 
-          {/* AI Risk Signals */}
+          {/* Risk Signals */}
           <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
             <span className="text-[11px] uppercase tracking-wider text-amber-800 font-bold flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-              AI Risk Signals Detected
+              Risk Signals Detected
             </span>
             <ul className="space-y-1.5 pl-1">
               {incident.conversationSignals.map((signal, idx) => (

@@ -4,7 +4,7 @@ from fastapi import WebSocket
 class ConnectionManager:
     """Tracks one live WebSocket per (family_id, role) and pushes events to them.
 
-    Roles: mom | dad | son | scammer. A manual presence override lets the demo
+    Roles: mom | dad | son | caller. A manual presence override lets the demo
     controller simulate "phone switched off" independently of the socket
     actually being connected.
     """

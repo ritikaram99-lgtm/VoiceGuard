@@ -31,11 +31,11 @@ def seed_demo_family() -> None:
         conn.execute("INSERT INTO families (id, name, created_at) VALUES (?, ?, ?)", (DEMO_FAMILY_ID, "Demo Family", now))
         conn.execute(
             "INSERT INTO users (id, family_id, name, role, login_id, password, phone, registered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ("demo-mom", DEMO_FAMILY_ID, "Mom", "mom", None, None, "+91 90000 00001", now),
+            ("demo-mom", DEMO_FAMILY_ID, "Mom", "mom", "mom_001", DEMO_PASSWORD, "+91 90000 00001", now),
         )
         conn.execute(
             "INSERT INTO users (id, family_id, name, role, login_id, password, phone, registered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ("demo-dad", DEMO_FAMILY_ID, "Dad", "dad", None, None, "+91 90000 00002", now),
+            ("demo-dad", DEMO_FAMILY_ID, "Dad", "dad", "dad_001", DEMO_PASSWORD, "+91 90000 00002", now),
         )
         conn.execute(
             "INSERT INTO users (id, family_id, name, role, login_id, password, phone, registered_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

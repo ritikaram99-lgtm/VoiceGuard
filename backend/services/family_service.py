@@ -44,6 +44,38 @@ def get_family_members(family_id: str) -> list[sqlite3.Row]:
         return conn.execute("SELECT * FROM users WHERE family_id = ?", (family_id,)).fetchall()
 
 
+def get_user_by_phone(phone: str) -> sqlite3.Row | None:
+    with db_session() as conn:
+        return conn.execute("SELECT * FROM users WHERE phone = ?", (phone,)).fetchone()
+
+
+def get_user_by_login(login_id: str) -> sqlite3.Row | None:
+    with db_session() as conn:
+        return conn.execute("SELECT * FROM users WHERE login_id = ?", (login_id,)).fetchone()
+
+
+def update_member_credentials(
+    user_id: str, login_id: str | None, password: str | None, name: str | None
+) -> sqlite3.Row | None:
+    fields, values = [], []
+    if login_id is not None:
+        fields.append("login_id = ?")
+        values.append(login_id)
+    if password is not None:
+        fields.append("password = ?")
+        values.append(password)
+    if name is not None:
+        fields.append("name = ?")
+        values.append(name)
+    if not fields:
+        return get_user(user_id)
+
+    values.append(user_id)
+    with db_session() as conn:
+        conn.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", values)
+    return get_user(user_id)
+
+
 def set_voice_embedding(user_id: str, embedding: list[float]) -> None:
     import json
 

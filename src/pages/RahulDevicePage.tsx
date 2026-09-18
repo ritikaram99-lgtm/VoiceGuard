@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Clock,
+  Loader2,
   Phone,
+  Send,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -18,11 +21,99 @@ import { StatusRing } from '../components/common/StatusRing';
 
 export const RahulDevicePage: React.FC = () => {
   const navigate = useNavigate();
-  const { verificationRequest, respondRahul, resetDemo } = useVoiceGuard();
+  const { verificationRequest, respondRahul, resetDemo, recentEvents, sendCallerVerification, callId } = useVoiceGuard();
+  const [sendState, setSendState] = useState<'idle' | 'sending' | 'sent'>('idle');
 
+  const isPending = verificationRequest.status === 'pending';
   const isAnsweredYes = verificationRequest.status === 'confirmed_yes';
   const isAnsweredNo = verificationRequest.status === 'confirmed_no';
   const isAnswered = isAnsweredYes || isAnsweredNo;
+  const isIdle = !isPending && !isAnswered;
+
+  const handleSendVerification = async () => {
+    setSendState('sending');
+    await sendCallerVerification('requested_by_son');
+    setSendState('sent');
+  };
+
+  if (isIdle) {
+    // Rahul's own dashboard — distinct from Mom's, showing his device's
+    // protection status rather than an incoming-call view he has none of.
+    return (
+      <div className="flex-1 max-w-2xl mx-auto w-full px-4 py-8 sm:py-12 space-y-6">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xl space-y-6">
+          <div className="flex items-center justify-between text-xs text-slate-400 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-1.5 font-mono text-slate-600">
+              <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+              <span>Pixel 9 Pro • Trusted Device</span>
+            </div>
+            <span className="font-mono text-[11px] text-slate-400">VG-SEC-AUTH</span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Avatar name="Rahul" role="son" size="lg" showRing status="safe" isOnline />
+            <div>
+              <h1 className="text-xl font-black text-slate-900">Rahul's Device</h1>
+              <p className="text-xs text-slate-500">
+                No identity verification request is currently pending.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 flex items-center gap-3">
+            <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0" />
+            <div className="text-sm">
+              <p className="font-bold text-emerald-900">This device is registered and reachable</p>
+              <p className="text-xs text-emerald-700">
+                If someone calls Mom claiming to be you, a confirmation prompt will appear here instantly.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-sm font-bold text-slate-800">Recent family activity</h3>
+            {recentEvents.slice(0, 3).map((event) => (
+              <div key={event.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="font-semibold text-slate-700">{event.title}</span>
+                </div>
+                <span className="text-slate-400">{event.timestamp}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 space-y-2">
+            <h3 className="text-sm font-bold text-slate-800">If you'd rather not use this device to confirm</h3>
+            <p className="text-xs text-slate-500">
+              You can request that the caller prove their identity with your VoiceGuard login instead —
+              useful if a call is in progress but confirming here isn't convenient right now.
+            </p>
+            {sendState === 'sent' ? (
+              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Verification message sent to the caller.</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSendVerification}
+                disabled={sendState === 'sending' || !callId}
+                className="py-2.5 px-4 bg-slate-900 hover:bg-black disabled:opacity-50 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2"
+              >
+                {sendState === 'sending' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                <span>Send Verification Message</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col justify-center items-center max-w-md mx-auto w-full px-4 py-8 sm:py-12">

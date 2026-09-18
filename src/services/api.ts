@@ -155,4 +155,32 @@ export const api = {
       return null;
     }
   },
+
+  async updateMemberCredentials(userId: string, fields: { login_id?: string; password?: string; name?: string }) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/members/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+      });
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, data };
+    } catch {
+      return { ok: false, data: null };
+    }
+  },
+
+  async familyLogin(identifier: string, password: string) {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/family/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier, password }),
+      });
+      const data = await res.json().catch(() => null);
+      return { ok: res.ok, data };
+    } catch {
+      return { ok: false, data: null };
+    }
+  },
 };

@@ -4,6 +4,7 @@ import {
   KeyRound,
   LayoutDashboard,
   PhoneCall,
+  Settings,
   Shield,
   ShieldCheck,
   Smartphone,
@@ -124,6 +125,13 @@ export const Navbar: React.FC = () => {
               <span className="hidden sm:inline">Family Shield Active</span>
               <span className="sm:hidden font-bold">Shield</span>
             </div>
+            <Link
+              to="/login"
+              title="Family Settings"
+              className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition"
+            >
+              <Settings className="w-4 h-4" />
+            </Link>
           </div>
         </div>
       </div>

@@ -1,0 +1,12 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+python-multipart==0.0.20
+websockets==14.1
+
+# Optional — real ML models (P1/P2). Not required to run the demo.
+# The mock services in services/whisper_service.py and services/speaker_service.py
+# are used automatically when these are not installed.
+# openai-whisper
+# torch
+# speechbrain

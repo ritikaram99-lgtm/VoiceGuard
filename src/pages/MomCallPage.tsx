@@ -16,9 +16,12 @@ import { useVoiceGuard } from '../context/VoiceGuardContext';
 import { Avatar } from '../components/common/Avatar';
 import { VoiceWaveform } from '../components/call/VoiceWaveform';
 import { TranscriptBubble } from '../components/call/TranscriptBubble';
+
 import { WhyPanel } from '../components/call/WhyPanel';
 import { VerifyPersonModal } from '../components/call/VerifyPersonModal';
 import { ActionProtection } from '../components/security/ActionProtection';
+import { LiveMicRecorder } from '../components/call/LiveMicRecorder';
+
 
 
 export const MomCallPage: React.FC = () => {
@@ -30,14 +33,17 @@ export const MomCallPage: React.FC = () => {
     callerName,
     callerNumber,
     callId,
+    setCallId,
     riskLevel,
     transcript,
     isWhyPanelOpen,
     isVerifyModalOpen,
     actionProtection,
     triggerSuspicious,
+    handleLiveAudioAnalysis,
     requestVerification,
     dismissActionProtection,
+
     setIsWhyPanelOpen,
     setIsVerifyModalOpen,
     setIsIncidentModalOpen,
@@ -147,6 +153,16 @@ export const MomCallPage: React.FC = () => {
           messages={transcript}
           onOpenWhy={() => setIsWhyPanelOpen(true)}
         />
+
+        {/* Live Microphone Recording Control */}
+        {callStatus !== 'ended' && (
+          <LiveMicRecorder
+            callId={callId}
+            onCallIdUpdated={(newId) => setCallId(newId)}
+            onAnalysisSuccess={handleLiveAudioAnalysis}
+          />
+        )}
+
 
         {/* Trust Signals Summary (Compact, Never fake probabilities!) */}
         <div className="w-full max-w-md">

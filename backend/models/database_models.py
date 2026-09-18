@@ -40,6 +40,9 @@ class AnalyzeResponse(BaseModel):
     recommendation: str
     speaker_match: Optional[bool] = None
     speaker_similarity: Optional[float] = None
+    amount_detected: bool = False
+    amount_value: Optional[float] = None
+    currency: Optional[str] = None
 
 
 class VerifyPersonResponse(BaseModel):

@@ -25,11 +25,44 @@ try:
 except ImportError:
     pass
 
+# Ensure ffmpeg binary is discoverable
+try:
+    import imageio_ffmpeg
+    exe = imageio_ffmpeg.get_ffmpeg_exe()
+    ffmpeg_dir = os.path.dirname(exe)
+    symlink_path = os.path.join(ffmpeg_dir, "ffmpeg")
+    if not os.path.exists(symlink_path):
+        try:
+            os.symlink(exe, symlink_path)
+        except OSError:
+            pass
+    if ffmpeg_dir not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = ffmpeg_dir + os.pathsep + os.environ.get("PATH", "")
+except Exception:
+    pass
+
 EMBEDDING_DIM = 32
 MATCH_THRESHOLD = float(os.getenv("VOICEGUARD_SPEAKER_THRESHOLD", "0.65"))
 
 _CLASSIFIER = None
 
+
+def _convert_to_wav_if_needed(raw_bytes: bytes) -> bytes:
+    if raw_bytes[:4] == b"RIFF":
+        return raw_bytes
+    import subprocess
+    try:
+        cmd = [
+            "ffmpeg", "-nostdin", "-threads", "0",
+            "-i", "pipe:0",
+            "-f", "wav", "-ac", "1", "-ar", "16000", "-acodec", "pcm_s16le",
+            "pipe:1"
+        ]
+        res = subprocess.run(cmd, input=raw_bytes, capture_output=True, check=True)
+        return res.stdout
+    except Exception as e:
+        logger.warning(f"Audio conversion to WAV via ffmpeg failed: {e}")
+        return raw_bytes
 
 
 def load_model():
@@ -53,16 +86,19 @@ def _embed_real(audio_bytes: bytes) -> list[float]:
     if _CLASSIFIER is None:
         load_model()
 
+    wav_bytes = _convert_to_wav_if_needed(audio_bytes)
+
     tmp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     path = tmp_file.name
     try:
-        tmp_file.write(audio_bytes)
+        tmp_file.write(wav_bytes)
         tmp_file.flush()
         tmp_file.close()
 
         signal = _CLASSIFIER.load_audio(path)
         embedding = _CLASSIFIER.encode_batch(signal.unsqueeze(0), normalize=True)
         return embedding.squeeze().tolist()
+
 
     finally:
         if os.path.exists(path):

@@ -18,7 +18,8 @@ import {
   INITIAL_TRANSCRIPT,
   SUSPICIOUS_TRANSCRIPT,
 } from '../data/mockData';
-import { api, DEFAULT_FAMILY_ID, WS_URL } from '../services/api';
+import { api, type BackendAnalyzeResponse, DEFAULT_FAMILY_ID, WS_URL } from '../services/api';
+
 
 interface VoiceGuardContextType {
 
@@ -30,6 +31,7 @@ interface VoiceGuardContextType {
   callerName: string;
   callerNumber: string;
   callId: string;
+  setCallId: (id: string) => void;
   riskLevel: RiskLevel;
   transcript: TranscriptMessage[];
   isWhyPanelOpen: boolean;
@@ -48,6 +50,7 @@ interface VoiceGuardContextType {
   // Action methods
   startDemoCall: () => void;
   triggerSuspicious: () => void;
+  handleLiveAudioAnalysis: (result: BackendAnalyzeResponse) => void;
   requestVerification: () => void;
   respondRahul: (isMe: boolean) => void;
   dismissActionProtection: () => void;
@@ -61,6 +64,7 @@ interface VoiceGuardContextType {
   resetDemo: () => void;
   runDemoStep: (step: DemoStep) => void;
 }
+
 
 const VoiceGuardContext = createContext<VoiceGuardContextType | undefined>(undefined);
 
@@ -405,6 +409,48 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   };
 
+  // 2b. Handle Real Live Microphone Audio Analysis (Whisper + Risk Engine)
+  const handleLiveAudioAnalysis = (result: BackendAnalyzeResponse) => {
+    let newLevel: RiskLevel = 'LOW RISK';
+    if (result.risk_level === 'HIGH' || result.risk_score >= 60) {
+      newLevel = 'HIGH RISK';
+    } else if (result.risk_level === 'SUSPICIOUS' || result.risk_level === 'MEDIUM' || result.risk_score > 30) {
+      newLevel = 'SUSPICIOUS';
+    } else {
+      newLevel = 'LOW RISK';
+    }
+
+    setRiskLevelState(newLevel);
+
+    let updatedTranscript = transcript;
+    if (result.transcript && result.transcript.trim()) {
+      const isSus = newLevel === 'HIGH RISK' || newLevel === 'SUSPICIOUS';
+      const newMsg: TranscriptMessage = {
+        id: `t-${Date.now()}`,
+        speaker: 'Rahul',
+        text: result.transcript,
+        timestamp: 'Just now',
+        isSuspicious: isSus,
+      };
+      updatedTranscript = [...transcript, newMsg];
+      setTranscript(updatedTranscript);
+    }
+
+    let updatedMembers = familyMembers;
+    if (newLevel === 'HIGH RISK') {
+      updatedMembers = familyMembers.map((m) =>
+        m.role === 'mom' ? { ...m, protectionStatus: 'alert' as const } : m
+      );
+      setFamilyMembers(updatedMembers);
+    }
+
+    syncCurrentState({
+      riskLevel: newLevel,
+      transcript: updatedTranscript,
+      familyMembers: updatedMembers,
+    });
+  };
+
   // 3. Mom requests identity verification
   const requestVerification = () => {
     setIsVerifyModalOpen(true);
@@ -587,6 +633,7 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         callerName,
         callerNumber,
         callId,
+        setCallId,
         riskLevel,
         transcript,
         isWhyPanelOpen,
@@ -601,6 +648,7 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         demoStep,
         startDemoCall,
         triggerSuspicious,
+        handleLiveAudioAnalysis,
         requestVerification,
         respondRahul,
         dismissActionProtection,
@@ -614,6 +662,7 @@ export const VoiceGuardProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         resetDemo,
         runDemoStep,
       }}
+
     >
       {children}
     </VoiceGuardContext.Provider>

@@ -117,6 +117,7 @@ async def analyze_call(
 
 
     signals = risk_service.analyze_transcript(final_transcript)
+    amount_info = risk_service.extract_amount(final_transcript)
 
     history = family_service.get_caller_history(call["caller_number"])
     caller_suspicious = bool(history and history["suspicious_calls"] > 0)
@@ -145,6 +146,9 @@ async def analyze_call(
             "signals": applied_signals,
             "why": why,
             "recommendation": recommendation,
+            "amount_detected": amount_info["amount_detected"],
+            "amount_value": amount_info["amount_value"],
+            "currency": amount_info["currency"],
         },
     )
 
@@ -158,6 +162,9 @@ async def analyze_call(
         recommendation=recommendation,
         speaker_match=speaker_match,
         speaker_similarity=speaker_similarity,
+        amount_detected=amount_info["amount_detected"],
+        amount_value=amount_info["amount_value"],
+        currency=amount_info["currency"],
     )
 
 
